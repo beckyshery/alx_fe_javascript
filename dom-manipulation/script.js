@@ -41,7 +41,7 @@ function syncQuotes(serverQuotes) {
 
     localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
     displayQuotes(updatedQuotes);
-    notifyConflictResolution();
+    alert('Quotes synced with server!');  // Added alert for sync notification
 }
 
 // Function to add a new quote locally and sync it to the server
@@ -67,4 +67,24 @@ async function postQuoteToServer(newQuote) {
         const data = await response.json();
         console.log('Successfully posted new quote to the server:', data);
     } catch (error) {
-        console.error('Error
+        console.error('Error posting data to server:', error);
+    }
+}
+
+// Function to notify user of conflict resolution
+function notifyConflictResolution() {
+    let notification = document.createElement('div');
+    notification.textContent = "Data conflict resolved. Your quotes have been synced with the server.";
+    notification.className = 'notification';
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Function to display quotes in the DOM
+function displayQuotes(quotes) {
+    const quoteDisplay = document.getElementById('quoteDisplay');
+    quoteDisplay.innerHTML = quotes.map(quote => `<p>${quote.text}</p>`).join('');
+}
