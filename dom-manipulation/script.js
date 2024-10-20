@@ -3,27 +3,22 @@ let quotes = JSON.parse(localStorage.getItem('quotes')) || [];
 // Simulate fetching quotes from the server every minute
 setInterval(fetchQuotesFromServer, 60000);
 
-function fetchQuotesFromServer() {
-    fetch('https://jsonplaceholder.typicode.com/posts')
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(serverQuotes) {
-            syncWithLocalQuotes(serverQuotes);
-        })
-        .catch(function(error) {
-            console.error('Error fetching data from server:', error);
-        });
+async function fetchQuotesFromServer() {
+    try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        const serverQuotes = await response.json();
+        syncWithLocalQuotes(serverQuotes);
+    } catch (error) {
+        console.error('Error fetching data from server:', error);
+    }
 }
 
 function syncWithLocalQuotes(serverQuotes) {
     let localQuotes = JSON.parse(localStorage.getItem('quotes')) || [];
     let updatedQuotes = [];
 
-    serverQuotes.forEach(function(serverQuote) {
-        let localQuote = localQuotes.find(function(quote) {
-            return quote.id === serverQuote.id;
-        });
+    serverQuotes.forEach((serverQuote) => {
+        let localQuote = localQuotes.find(quote => quote.id === serverQuote.id);
 
         if (localQuote) {
             if (new Date(serverQuote.updatedAt) > new Date(localQuote.updatedAt)) {
@@ -41,32 +36,29 @@ function syncWithLocalQuotes(serverQuotes) {
     notifyConflictResolution();
 }
 
-function addQuote(newQuote) {
+async function addQuote(newQuote) {
     let localQuotes = JSON.parse(localStorage.getItem('quotes')) || [];
     localQuotes.push(newQuote);
     localStorage.setItem('quotes', JSON.stringify(localQuotes));
 
     // Sync the new quote to the server
-    postQuoteToServer(newQuote);
+    await postQuoteToServer(newQuote);
 }
 
-function postQuoteToServer(newQuote) {
-    fetch('https://jsonplaceholder.typicode.com/posts', {
-        method: 'POST',
-        body: JSON.stringify(newQuote),
-        headers: {
-            'Content-type': 'application/json; charset=UTF-8',
-        }
-    })
-    .then(function(response) {
-        return response.json();
-    })
-    .then(function(data) {
+async function postQuoteToServer(newQuote) {
+    try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+            method: 'POST',
+            body: JSON.stringify(newQuote),
+            headers: {
+                'Content-type': 'application/json; charset=UTF-8',
+            }
+        });
+        const data = await response.json();
         console.log('Successfully posted new quote to the server:', data);
-    })
-    .catch(function(error) {
+    } catch (error) {
         console.error('Error posting data to server:', error);
-    });
+    }
 }
 
 function notifyConflictResolution() {
@@ -75,14 +67,12 @@ function notifyConflictResolution() {
     notification.className = 'notification';
     document.body.appendChild(notification);
 
-    setTimeout(function() {
+    setTimeout(() => {
         notification.remove();
     }, 5000);
 }
 
 function displayQuotes(quotes) {
     const quoteDisplay = document.getElementById('quoteDisplay');
-    quoteDisplay.innerHTML = quotes.map(function(quote) {
-        return `<p>${quote.text}</p>`;
-    }).join('');
+    quoteDisplay.innerHTML = quotes.map(quote => `<p>${quote.text}</p>`).join('');
 }
