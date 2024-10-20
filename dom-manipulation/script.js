@@ -1,110 +1,69 @@
-// Existing quotes array
-let quotes = [
-    { text: "Life is what happens when you're busy making other plans.", category: "Life" },
-    { text: "The only limit to our realization of tomorrow is our doubts of today.", category: "Inspiration" },
-    { text: "Success is not the key to happiness. Happiness is the key to success.", category: "Success" },
-    // Add more quotes here...
-];
+let quotes = JSON.parse(localStorage.getItem('quotes')) || [];
 
-// Load the last selected category from local storage or default to 'all'
-let selectedCategory = localStorage.getItem('selectedCategory') || 'all';
+// Simulate fetching quotes from the server every minute
+setInterval(fetchQuotesFromServer, 60000);
 
-// Display a random quote on button click
-document.getElementById('newQuote').addEventListener('click', showRandomQuote);
+function fetchQuotesFromServer() {
+    fetch('https://jsonplaceholder.typicode.com/posts')
+        .then((response) => response.json())
+        .then((serverQuotes) => {
+            syncWithLocalQuotes(serverQuotes);
+        });
+}
 
-// Populate categories dropdown and set up filtering
-document.addEventListener('DOMContentLoaded', () => {
-    populateCategories();
-    filterQuotes(); // Apply any existing filter on page load
-});
+function syncWithLocalQuotes(serverQuotes) {
+    let localQuotes = JSON.parse(localStorage.getItem('quotes')) || [];
+    let updatedQuotes = [];
 
-// Function to populate category dropdown dynamically
-function populateCategories() {
-    const categoryFilter = document.getElementById('categoryFilter');
-    const categories = [...new Set(quotes.map(quote => quote.category))]; // Get unique categories
-
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        categoryFilter.appendChild(option);
+    serverQuotes.forEach((serverQuote) => {
+        let localQuote = localQuotes.find((quote) => quote.id === serverQuote.id);
+        if (localQuote) {
+            if (serverQuote.updatedAt > localQuote.updatedAt) {
+                updatedQuotes.push(serverQuote);
+            } else {
+                updatedQuotes.push(localQuote);
+            }
+        } else {
+            updatedQuotes.push(serverQuote);
+        }
     });
 
-    // Set the dropdown to the last selected category
-    categoryFilter.value = selectedCategory;
+    localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
+    displayQuotes(updatedQuotes);
+    notifyConflictResolution();
 }
 
-// Function to filter quotes based on selected category
-function filterQuotes() {
-    const categoryFilter = document.getElementById('categoryFilter');
-    selectedCategory = categoryFilter.value; // Update selected category
+function addQuote(newQuote) {
+    let localQuotes = JSON.parse(localStorage.getItem('quotes')) || [];
+    localQuotes.push(newQuote);
+    localStorage.setItem('quotes', JSON.stringify(localQuotes));
 
-    const filteredQuotes = selectedCategory === 'all'
-        ? quotes
-        : quotes.filter(quote => quote.category === selectedCategory);
-
-    // Save the selected category to localStorage
-    localStorage.setItem('selectedCategory', selectedCategory);
-
-    // Display a random filtered quote
-    if (filteredQuotes.length > 0) {
-        const randomQuote = filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-        document.getElementById('quoteDisplay').textContent = randomQuote.text;
-    } else {
-        document.getElementById('quoteDisplay').textContent = 'No quotes available in this category.';
-    }
+    // Sync the new quote to the server
+    postQuoteToServer(newQuote);
 }
 
-// Function to add a new quote
-function addQuote() {
-    const newQuoteText = document.getElementById('newQuoteText').value;
-    const newQuoteCategory = document.getElementById('newQuoteCategory').value;
-
-    if (newQuoteText && newQuoteCategory) {
-        const newQuote = { text: newQuoteText, category: newQuoteCategory };
-        quotes.push(newQuote);
-
-        // Save quotes to localStorage
-        saveQuotes();
-
-        // Update the category dropdown
-        populateCategories();
-
-        alert('New quote added successfully!');
-
-        // Clear input fields
-        document.getElementById('newQuoteText').value = '';
-        document.getElementById('newQuoteCategory').value = '';
-    } else {
-        alert('Please enter both a quote and a category.');
-    }
+function postQuoteToServer(newQuote) {
+    fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST',
+        body: JSON.stringify(newQuote),
+        headers: {
+            'Content-type': 'application/json; charset=UTF-8',
+        },
+    });
 }
 
-// Save quotes array to localStorage
-function saveQuotes() {
-    localStorage.setItem('quotes', JSON.stringify(quotes));
+function notifyConflictResolution() {
+    let notification = document.createElement('div');
+    notification.textContent = "Data conflict resolved. Your quotes have been synced with the server.";
+    notification.className = 'notification';
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
 }
 
-// Function to load quotes from localStorage on page load
-function loadQuotes() {
-    const storedQuotes = JSON.parse(localStorage.getItem('quotes'));
-    if (storedQuotes) {
-        quotes = storedQuotes;
-    }
-}
-
-// Load quotes from localStorage when the page loads
-document.addEventListener('DOMContentLoaded', loadQuotes);
-
-// Function to import quotes from a JSON file
-function importFromJsonFile(event) {
-    const fileReader = new FileReader();
-    fileReader.onload = function (event) {
-        const importedQuotes = JSON.parse(event.target.result);
-        quotes.push(...importedQuotes);
-        saveQuotes();
-        populateCategories();
-        alert('Quotes imported successfully!');
-    };
-    fileReader.readAsText(event.target.files[0]);
+function displayQuotes(quotes) {
+    const quoteDisplay = document.getElementById('quoteDisplay');
+    quoteDisplay.innerHTML = quotes.map((quote) => `<p>${quote.text}</p>`).join('');
 }
